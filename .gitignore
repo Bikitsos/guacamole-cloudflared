@@ -1,0 +1,37 @@
+# Environment files with secrets
+.env
+
+# Database data (volume data if stored locally)
+data/
+
+# Generated SQL files
+init/sql/
+
+# Print jobs
+print/
+
+# Uploaded files
+drive/
+
+# Session recordings
+record/
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak

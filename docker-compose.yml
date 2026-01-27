@@ -1,0 +1,129 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database for Guacamole
+  guacamole-db:
+    image: docker.io/library/postgres:15-alpine
+    container_name: guacamole-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-guacamole_db}
+      POSTGRES_USER: ${POSTGRES_USER:-guacamole_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-guacamole_password}
+    volumes:
+      - guacamole-db-data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - guacamole-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-guacamole_user} -d ${POSTGRES_DB:-guacamole_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Guacd - Guacamole Daemon (proxy)
+  guacd:
+    image: docker.io/guacamole/guacd:latest
+    container_name: guacd
+    restart: unless-stopped
+    volumes:
+      # Drive for file transfers (uploads/downloads)
+      - guacamole-drive:/drive
+      # Recording storage
+      - guacamole-record:/record
+      # Printing support - PDF output directory
+      - guacamole-print:/print
+    environment:
+      # Enable debug logging (optional)
+      GUACD_LOG_LEVEL: ${GUACD_LOG_LEVEL:-info}
+    networks:
+      - guacamole-net
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "4822"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Guacamole Web Application
+  guacamole:
+    image: docker.io/guacamole/guacamole:latest
+    container_name: guacamole
+    restart: unless-stopped
+    depends_on:
+      guacamole-db:
+        condition: service_healthy
+      guacd:
+        condition: service_healthy
+    environment:
+      # Guacd connection
+      GUACD_HOSTNAME: guacd
+      GUACD_PORT: 4822
+      
+      # PostgreSQL connection
+      POSTGRESQL_HOSTNAME: guacamole-db
+      POSTGRESQL_PORT: 5432
+      POSTGRESQL_DATABASE: ${POSTGRES_DB:-guacamole_db}
+      POSTGRESQL_USER: ${POSTGRES_USER:-guacamole_user}
+      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD:-guacamole_password}
+      
+      # Enable extensions
+      POSTGRESQL_AUTO_CREATE_ACCOUNTS: ${POSTGRESQL_AUTO_CREATE_ACCOUNTS:-true}
+      
+      # File transfer settings
+      GUACAMOLE_HOME: /etc/guacamole
+      
+      # Recording path
+      RECORDING_SEARCH_PATH: /record
+      
+      # Extension configurations (optional)
+      # TOTP_ENABLED: ${TOTP_ENABLED:-false}
+      # OPENID_AUTHORIZATION_ENDPOINT: ${OPENID_AUTHORIZATION_ENDPOINT:-}
+      # OPENID_JWKS_ENDPOINT: ${OPENID_JWKS_ENDPOINT:-}
+      # OPENID_ISSUER: ${OPENID_ISSUER:-}
+      # OPENID_CLIENT_ID: ${OPENID_CLIENT_ID:-}
+      # OPENID_REDIRECT_URI: ${OPENID_REDIRECT_URI:-}
+    volumes:
+      # Guacamole configuration
+      - ./guacamole-home:/etc/guacamole:ro
+      # Shared volumes with guacd
+      - guacamole-drive:/drive
+      - guacamole-record:/record
+      - guacamole-print:/print
+    networks:
+      - guacamole-net
+    # Don't expose port directly - use cloudflared tunnel
+    # ports:
+    #   - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/guacamole/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Cloudflared Tunnel
+  cloudflared:
+    image: docker.io/cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    depends_on:
+      guacamole:
+        condition: service_healthy
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - guacamole-net
+
+volumes:
+  guacamole-db-data:
+    driver: local
+  guacamole-drive:
+    driver: local
+  guacamole-record:
+    driver: local
+  guacamole-print:
+    driver: local
+
+networks:
+  guacamole-net:
+    driver: bridge
