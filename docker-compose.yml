@@ -28,11 +28,11 @@ services:
     restart: unless-stopped
     volumes:
       # Drive for file transfers (uploads/downloads)
-      - guacamole-drive:/drive
+      - ./data/drive:/drive
       # Recording storage
-      - guacamole-record:/record
+      - ./data/record:/record
       # Printing support - PDF output directory
-      - guacamole-print:/print
+      - ./data/print:/print
     environment:
       # Enable debug logging (optional)
       GUACD_LOG_LEVEL: ${GUACD_LOG_LEVEL:-info}
@@ -86,9 +86,9 @@ services:
       # Guacamole configuration
       - ./guacamole-home:/etc/guacamole:ro
       # Shared volumes with guacd
-      - guacamole-drive:/drive
-      - guacamole-record:/record
-      - guacamole-print:/print
+      - ./data/drive:/drive
+      - ./data/record:/record
+      - ./data/print:/print
     networks:
       - guacamole-net
     # Don't expose port directly - use cloudflared tunnel
@@ -116,12 +116,6 @@ services:
 
 volumes:
   guacamole-db-data:
-    driver: local
-  guacamole-drive:
-    driver: local
-  guacamole-record:
-    driver: local
-  guacamole-print:
     driver: local
 
 networks:

@@ -79,6 +79,12 @@ echo ""
 mkdir -p "$PROJECT_DIR/guacamole-home"
 mkdir -p "$PROJECT_DIR/init"
 
+# Create directories for file transfers, printing, and recordings
+mkdir -p "$PROJECT_DIR/data/drive"
+mkdir -p "$PROJECT_DIR/data/print"
+mkdir -p "$PROJECT_DIR/data/record"
+echo "Created data directories for file transfers, printing, and recordings"
+
 # Make init script executable
 chmod +x "$PROJECT_DIR/init/01-init-db.sh"
 
