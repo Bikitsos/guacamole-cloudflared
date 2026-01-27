@@ -1,0 +1,19 @@
+# Podman Auto-Update Timer
+# Runs nightly at 3:00 AM
+#
+# Install with:
+#   mkdir -p ~/.config/systemd/user/
+#   cp systemd/podman-auto-update.* ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now podman-auto-update.timer
+
+[Unit]
+Description=Podman auto-update timer
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=900
+Persistent=true
+
+[Install]
+WantedBy=timers.target
