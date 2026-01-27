@@ -1,5 +1,6 @@
 # Podman Auto-Update Service
 # Checks for new container images and restarts containers if updated
+# Also cleans up unused images and volumes
 
 [Unit]
 Description=Podman auto-update service
@@ -9,8 +10,16 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+# Update containers with new images
 ExecStart=/usr/bin/podman auto-update
-ExecStartPost=/usr/bin/podman image prune -f
+# Remove unused images (dangling and unreferenced)
+ExecStartPost=/usr/bin/podman image prune -af
+# Remove unused volumes (not attached to containers)
+ExecStartPost=/usr/bin/podman volume prune -f
+# Remove unused networks
+ExecStartPost=/usr/bin/podman network prune -f
+# Full system prune (optional - removes all unused data)
+# ExecStartPost=/usr/bin/podman system prune -af --volumes
 
 [Install]
 WantedBy=default.target
